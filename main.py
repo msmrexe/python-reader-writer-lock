@@ -4,7 +4,7 @@
 Reader-Writer Problem Simulator
 
 This script spawns a number of concurrent reader and writer
-threads to demonstrate the WriterPriorityRWLock.
+threads to demonstrate the three types of RW Locks.
 """
 
 import threading
@@ -12,11 +12,16 @@ import logging
 import random
 import time
 import argparse
-from rw_lock.lock import WriterPriorityRWLock
+# Import all three lock classes from the 'locks' module
+from rw_lock.locks import (
+    ReaderPriorityRWLock, 
+    WriterPriorityRWLock, 
+    FairRWLock
+)
 
 # --- Global Shared Resources ---
 shared_buffer = []
-lock = WriterPriorityRWLock()
+lock = None # Will be set in main()
 
 # ---------------------------------
 # Thread Target Functions
@@ -71,6 +76,7 @@ def reader(name: str):
 
 def main():
     """Parses args and runs the simulation."""
+    global lock # We need to assign the global 'lock'
     
     parser = argparse.ArgumentParser(
         description="Run a Reader-Writer lock simulation."
@@ -88,6 +94,12 @@ def main():
         help="Probability (0.0 to 1.0) of a thread being a writer."
     )
     parser.add_argument(
+        '-p', '--priority',
+        choices=['reader', 'writer', 'fair'],
+        default='writer',
+        help="Set the lock priority model."
+    )
+    parser.add_argument(
         '--log-level',
         choices=['DEBUG', 'INFO'],
         default='INFO',
@@ -102,6 +114,16 @@ def main():
         format='{threadName} {message}',
         style='{'
     )
+    
+    # --- Select and instantiate the chosen lock ---
+    if args.priority == 'reader':
+        lock = ReaderPriorityRWLock()
+    elif args.priority == 'writer':
+        lock = WriterPriorityRWLock()
+    elif args.priority == 'fair':
+        lock = FairRWLock()
+
+    print(f"--- Starting {args.priority.title()}-Priority Simulation ---")
     
     # --- Start Simulation ---
     threads = []
